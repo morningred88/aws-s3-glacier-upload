@@ -1,39 +1,42 @@
-package com.muhutech.s3.glacier.upload.controller;
+package com.muhutech.aws.s3.glacier.upload.Service;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.glacier.AmazonGlacierClient;
 import com.amazonaws.services.glacier.transfer.ArchiveTransferManager;
 import com.amazonaws.services.glacier.transfer.UploadResult;
-import com.muhutech.s3.glacier.upload.model.ArchiveLoadingInfo;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Date;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.springframework.stereotype.Service;
 
 /**
  *
  * @author Lily Ma
  */
-@RestController
-public class GlacierController {
-    
+@Service
+public class ArchiveUploadService {
+
+    private static final Logger LOGGER = LogManager.getLogger(ArchiveUploadService.class.getName());
+
     public static AmazonGlacierClient client;
 
-    @RequestMapping(value = "/archive", method = RequestMethod.POST)
-    public String uploadFilesToGlacier(@RequestBody ArchiveLoadingInfo archiveLoadingInfo) {
+    private String vaultName;
+
+    /**
+     * Uploading an Archive Using the High-Level API
+     *
+     * @param archiveToUpload
+     * @return
+     */
+    public String uploadFilesToGlacier(String archiveToUpload) {
 
         String responseMessage;
-        
-        String archiveToUpload = archiveLoadingInfo.getArchiveFilePath();
-
-        String vaultName = archiveLoadingInfo.getVaultName();
 
         ProfileCredentialsProvider credentials = new ProfileCredentialsProvider();
-        
+
         client = new AmazonGlacierClient(credentials);
 
         client.setEndpoint("https://glacier.us-east-2.amazonaws.com/");
@@ -43,14 +46,20 @@ public class GlacierController {
             UploadResult result = atm.upload(vaultName, "my archive " + (new Date()), new File(archiveToUpload));
 
             String archiveId = result.getArchiveId();
-            
-            responseMessage = "Archive ID: " + archiveId;
+
+            responseMessage = archiveToUpload + " has been successfully uploaded. Archive ID is :: " + archiveId;
 
         } catch (AmazonClientException | FileNotFoundException e) {
-            
-            responseMessage = "Error || " + e;
+
+            responseMessage = archiveToUpload + " uploading failed :: " + e;
         }
+
+        LOGGER.info(responseMessage);
         return responseMessage;
+    }
+
+    public void setVaultName(String vaultName) {
+        this.vaultName = vaultName;
     }
 
 }
